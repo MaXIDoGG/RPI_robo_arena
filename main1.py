@@ -1,11 +1,7 @@
 import time
+import asyncio
 import RPi.GPIO as GPIO
 from rpi_ws281x import PixelStrip, Color
-from playsound import playsound
-# import pyglet
-# sound = pyglet.media.load("//home//admin//project//buttons//start.mp3")
-# sound.play()
-
 
 # Настройки светодиодной ленты
 LED_COUNT = 180
@@ -44,15 +40,15 @@ buttons = [TEAM1_READY, TEAM1_STOP, TEAM2_READY, TEAM2_STOP, REFEREE_START, REFE
 for button in buttons:
     GPIO.setup(button, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
-def set_color(color, duration=0):
+async def set_color(color, duration=0):
     """Установка цвета всей ленты"""
     for i in range(strip.numPixels()):
         strip.setPixelColor(i, color)
     strip.show()
     if duration > 0:
-        time.sleep(duration)
+        await asyncio.sleep(duration)
 
-def fade_to_color(target_color, duration=1.0):
+async def fade_to_color(target_color, duration=1.0):
     """Плавный переход к указанному цвету"""
     steps = 100
     delay = duration / steps
@@ -74,57 +70,66 @@ def fade_to_color(target_color, duration=1.0):
         for i in range(strip.numPixels()):
             strip.setPixelColor(i, Color(r, g, b))
         strip.show()
-        time.sleep(delay)
+        await asyncio.sleep(delay)
 
-def reset_to_waiting():
+async def blink(target_color, duration=2.0):
+    current_color = strip.getPixelColor(0)
+    await fade_to_color(target_color, duration/2)
+    await fade_to_color(current_color, duration/2)
+
+async def reset_to_waiting():
     """Сброс в состояние ожидания"""
     global current_state, team1_ready, team2_ready
     current_state = STATE_WAITING
     team1_ready = False
     team2_ready = False
-    fade_to_color(Color(0, 0, 255))  # Синий
+    await fade_to_color(Color(0, 0, 255))  # Синий
 
-def handle_button_press(button):
+async def handle_button_press(button):
     """Обработка нажатия кнопок"""
     global current_state, team1_ready, team2_ready
     
     if button == TEAM1_READY and current_state == STATE_WAITING:
         team1_ready = True
-        set_color(Color(0, 255, 0), 0)  # Зеленый на 2 секунды
+        await blink(Color(0, 255, 0), 2)  # Зеленый на 2 секунды
         if team2_ready:
             current_state = STATE_READY
     
     elif button == TEAM2_READY and current_state == STATE_WAITING:
         team2_ready = True
-        set_color(Color(0, 255, 0), 0)  # Зеленый на 2 секунды
+        await blink(Color(0, 255, 0), 0)  # Зеленый на 2 секунды
         if team1_ready:
             current_state = STATE_READY
     
     elif button == REFEREE_START and current_state == STATE_READY:
         current_state = STATE_FIGHT
-        playsound('//home//admin//project//buttons//start.mp3', block=False)
-        fade_to_color(Color(255, 0, 0))  # Красный
+        await fade_to_color(Color(255, 0, 0), 2)  # Красный
     
     elif (button in [TEAM1_STOP, TEAM2_STOP, REFEREE_STOP]) and current_state != STATE_WAITING:
-        reset_to_waiting()
-        playsound('//home//admin//project//buttons//stop.mp3', block=False)
+        await reset_to_waiting()
 
-# Основной цикл
-try:
-    # Инициализация - синий цвет
-    set_color(Color(0, 0, 255))
-    
-    while True:
-        # Проверка всех кнопок
-        for button in buttons:
-            if GPIO.input(button) == GPIO.HIGH:
-                handle_button_press(button)
-                time.sleep(0.1)  # Задержка для антидребезга
-                print(current_state, team1_ready, team2_ready, button)
+
+async def main():
+    # Основной цикл
+    try:
+        # Инициализация - синий цвет
+        await set_color(Color(0, 0, 255))
         
-        time.sleep(0.05)
+        while True:
+            # Проверка всех кнопок
+            for button in buttons:
+                if GPIO.input(button) == GPIO.HIGH:
+                    await handle_button_press(button)
+                    await asyncio.sleep(0.1)  # Задержка для антидребезга
+                    print(current_state, team1_ready, team2_ready, button)
+            
+            await asyncio.sleep(0.05)
 
-except KeyboardInterrupt:
-    set_color(Color(0, 0, 0))  # Выключить все светодиоды
-    GPIO.cleanup()
-    print("Программа завершена.")
+    except KeyboardInterrupt:
+        await set_color(Color(0, 0, 0))  # Выключить все светодиоды
+        GPIO.cleanup()
+        print("Программа завершена.")
+        
+if __name__ == "__main__":
+    asyncio.run(main())
+        
