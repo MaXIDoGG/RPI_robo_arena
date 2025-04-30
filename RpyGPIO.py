@@ -20,7 +20,7 @@ class GPIOHandler(QObject):
 
     def __init__(self):
         # self.tournament = Tournament(id=fight_id, login=login, password=password, api_url=api_url)
-        
+        self.lock = threading.Lock()
         # Настройки по умолчанию
         self.LED_COUNT = 180
         self.LED_PIN = 18
@@ -88,9 +88,11 @@ class GPIOHandler(QObject):
                 # Проверка всех кнопок
                 for button in self.buttons:
                     if GPIO.input(button) == GPIO.HIGH:
-                        self.handle_button_press(button)
-                        time.sleep(0.05)  # Задержка для антидребезга
+                        # self.handle_button_press(button)
+                        threading.Thread(target=self.handle_button_press, args=(button, )).start()
+                        time.sleep(0.1)  # Задержка для антидребезга
                         print(self.current_state, self.team1_ready, self.team2_ready, button)
+                        
 
                 time.sleep(0.05)
 
@@ -101,28 +103,26 @@ class GPIOHandler(QObject):
 
     def handle_button_press(self, button):
         """Обработка нажатия кнопки"""
-        if button == self.TEAM1_READY and self.current_state == self.STATE_WAITING:
+        print(button)
+        if button == self.TEAM1_READY and self.current_state == self.STATE_WAITING and not self.team1_ready:
             self.team1_ready = True
-            self.blink(Color(0, 255, 0), team=1, duration=2)  # Зеленый
+            self.fade_to_color(Color(0, 255, 0), team=1)  # Зеленый
+            if self.team2_ready:
+                self.current_state = self.STATE_READY
             # result = self.tournament.set_ready("565", "first_ready", "https://grmvzdlx-3008.euw.devtunnels.ms")
             # print(result)
             # result = self.tournament.reload_page("https://grmvzdlx-3008.euw.devtunnels.ms")
             # print(result)
-            if self.team2_ready:
-                self.current_state = self.STATE_READY
-                
-
-        elif button == self.TEAM2_READY and self.current_state == self.STATE_WAITING:
+        elif button == self.TEAM2_READY and self.current_state == self.STATE_WAITING and not self.team2_ready:
             self.team2_ready = True
-            self.blink(Color(0, 255, 0), team=2, duration=2)  # Зеленый
+            self.fade_to_color(Color(0, 255, 0), team=2)  # Зеленый
+            if self.team1_ready:
+                self.current_state = self.STATE_READY
             # result = self.tournament.set_ready("565", "second_ready", "https://grmvzdlx-3008.euw.devtunnels.ms")
             # print(result)
             # result = self.tournament.reload_page("https://grmvzdlx-3008.euw.devtunnels.ms")
             # print(result)
-            if self.team1_ready:
-                self.current_state = self.STATE_READY
-
-        elif button == self.REFEREE_START:
+        elif button == self.REFEREE_START and self.current_state != self.STATE_FIGHT:
             self.current_state = self.STATE_FIGHT
             self.fight_started.emit()
             self.fade_to_color(Color(255, 0, 0), team=0, duration=2)  # Красный
@@ -130,9 +130,7 @@ class GPIOHandler(QObject):
             # print(result)
             # result = self.tournament.reload_page("https://grmvzdlx-3008.euw.devtunnels.ms")
             # print(result)
-
-
-        elif (button in [self.TEAM1_STOP, self.TEAM2_STOP, self.REFEREE_STOP]):
+        elif (button in [self.TEAM1_STOP, self.TEAM2_STOP, self.REFEREE_STOP]) and self.current_state != self.STATE_WAITING:
             self.fight_stopped.emit()
             self.reset_to_waiting()
             # result = self.tournament.setfight("565", "3", "https://grmvzdlx-3008.euw.devtunnels.ms")
@@ -144,8 +142,8 @@ class GPIOHandler(QObject):
     def set_color(self, color, team=0):
         """Установка цвета всей ленты"""
         if team == 1:
-            for i in range(91, self.strip.numPixels()):
-                self.strip.setPixelColor(i, color)
+                for i in range(90, self.strip.numPixels()):
+                    self.strip.setPixelColor(i, color)
         elif team == 2:
             for i in range(self.strip.numPixels()-90):
                 self.strip.setPixelColor(i, color)
@@ -156,12 +154,15 @@ class GPIOHandler(QObject):
         # if duration > 0:
         #     time.sleep(duration)
 
-    def fade_to_color(self, target_color, team=0, duration=1.0):
+    def fade_to_color(self, target_color, team=0, duration=0.5):
         """Плавный переход к указанному цвету"""
         steps = 100
         delay = duration / steps
-
-        current_color = self.strip.getPixelColor(0)
+        
+        if team==2:
+            current_color = self.strip.getPixelColor(0)
+        else:
+            current_color = self.strip.getPixelColor(91)
         current_r = (current_color >> 16) & 0xff
         current_g = (current_color >> 8) & 0xff
         current_b = current_color & 0xff
@@ -170,17 +171,20 @@ class GPIOHandler(QObject):
         target_g = (target_color >> 8) & 0xff
         target_b = target_color & 0xff
 
-        for step in range(steps):
-            r = int(current_r + (target_r - current_r) * (step / steps))
-            g = int(current_g + (target_g - current_g) * (step / steps))
-            b = int(current_b + (target_b - current_b) * (step / steps))
+        with self.lock:
+            for step in range(steps):
+                r = int(current_r + (target_r - current_r) * (step / steps))
+                g = int(current_g + (target_g - current_g) * (step / steps))
+                b = int(current_b + (target_b - current_b) * (step / steps))
 
-            self.set_color(Color(r, g, b), team=team)
-            time.sleep(delay)
+                self.set_color(Color(r, g, b), team=team)
+                time.sleep(delay)
 
     def blink(self, target_color, team=0, duration=2.0):
         """Мигание цветом"""
+        
         current_color = self.strip.getPixelColor(0)
+        
         self.fade_to_color(target_color, team=team, duration=duration/2)
         self.fade_to_color(current_color, team=team, duration=duration/2)
 
