@@ -52,7 +52,7 @@ class Tournament:
 
     def connect(self):
         """Подключается к серверу."""
-        self.sio.connect(self.api_url)
+        self.sio.connect(self.api_url, wait_timeout = 10)
         self.sio.wait()
 
     def send_team1_ready(self):
