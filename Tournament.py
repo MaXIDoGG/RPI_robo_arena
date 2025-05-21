@@ -68,6 +68,10 @@ class Tournament:
     def send_fight_end(self):
         """Отправляет запрос на завершение боя."""
         self.sio.emit("BUTTONS: Fight end.", self.id)
+        
+    def send_preparing(self):
+        """Отправляет запрос на подготовку к бою."""
+        self.sio.emit("BUTTONS: Preparing start.", self.id)
 
     def disconnect(self):
         """Отключается от сервера."""
