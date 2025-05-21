@@ -78,6 +78,7 @@ class GPIOHandler(QObject):
         print("Starting!")
         try:
         # Инициализация - синий цвет
+            self.set_color(Color(0, 0, 0))
             self.set_color(Color(0, 0, 255))
             while self._running:
                 # Проверка всех кнопок
