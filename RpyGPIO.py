@@ -119,7 +119,8 @@ class GPIOHandler(QObject):
         elif button == self.REFEREE_START and self.current_state != self.STATE_FIGHT:
             if self.current_state == self.STATE_WAITING:
                 self.current_state = self.PREPARING
-                self.fight_started.emit()
+                self.fight_started.emit() # ????
+                self.tournament.send_preparing()
             else:
                 self.current_state = self.STATE_FIGHT
                 self.fight_started.emit()
