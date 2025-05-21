@@ -181,7 +181,7 @@ class GPIOHandler(QObject):
                 self.set_color(Color(r, g, b), team=team)
                 time.sleep(delay)
                 
-    def circle_color(self, first_color, second_color, frequency=10, duration=5):
+    def circle_color(self, first_color, second_color, frequency=30, duration=100):
         delay = 1 / frequency
         line_id = 0
         current_color = first_color
