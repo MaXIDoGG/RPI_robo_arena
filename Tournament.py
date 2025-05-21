@@ -6,88 +6,82 @@ class Tournament:
     def __init__(self, id, login, password, api_url):
         self.api_url = api_url
         self.id = id
-        self.sio = socketio.Client()  # Создаем клиент Socket.IO
+        self.login = login
+        self.password = password
+        self.sio = socketio.Client()
         
-        # Регистрируем обработчики событий
-        self.sio.on('connect', self.on_connect)  # Альтернатива декоратору
-        self.sio.on('disconnect', self.on_disconnect)
-        self.sio.on("BACK-END: Auth sent.", self.auth)
+        # Регистрация обработчиков событий
+        self.register_handlers()
         
-        self.auth(login, password)  # Предполагается, что это ваш метод аутентификации
-        self.sio.connect(api_url)  # Подключаемся к серверу
+        # Подключение к серверу и авторизация
+        self.connect()
         
-    def on_connect(self):
-        print('✅ Connection established!')
-        self.sio.emit('join_tournament', {'tournament_id': self.id})  # Пример отправки события
-    
-    def on_disconnect(self):
-        print('❌ Disconnected from server')
-    
-    def auth(self, login, password):
-        # Ваш код аутентификации (если нужен)
-        pass
 
-    def connection(self):
-        self.
-        
-        
-    
-        
-        
-    # def auth(self, login, password):
-    #     response = requests.get(f"{self.api_url}/login?login={login}&password={password}")
-    #     print(response.json().get('token'))
-    #     self.token = response.json().get('token')
-    #     self.fight_id = response.json().get('fight_id')
-    
-        
-        
-    # def set_fight(self, id, stat, apiurl):
-    #     url = f"{apiurl}/api/fights/{id}"
-    #     headers = {
-    #         "Content-Type": "application/json"
-    #     }
-    #     data = {
-    #         "fight_id": id,
-    #         "fight_state": stat
-    #     }
-        
-    #     response = requests.post(
-    #         url,
-    #         headers=headers,
-    #         cookies={"token": self.token},
-    #         data=json.dumps(data),
-    #         allow_redirects=True,
-    #         timeout=None
-    #     )
-        
-    #     return response.status_code
-    
-    # def set_ready(self, id, stat, apiurl):
-    #     url = f"{apiurl}/api/fights/{id}"
-    #     headers = {
-    #         "Content-Type": "application/json"
-    #     }
-    #     data = {
-    #         "fight_id": id,
-    #         stat: "1"
-    #     }
-        
-    #     response = requests.post(
-    #         url,
-    #         headers=headers,
-    #         cookies={"token": self.token},
-    #         data=json.dumps(data),
-    #         allow_redirects=True,
-    #         timeout=None
-    #     )
-        
-    #     return response.status_code
-    
-    # def reload_page(self, apiurl):
-    #     url = f"{apiurl}/events"
-    #     response = requests.post(
-    #         url
-    #     )
-        
-    #     return response.status_code
+    def register_handlers(self):
+        """Регистрирует все обработчики событий."""
+        @self.sio.event
+        def connect():
+            print("✅ Подключено к серверу.")
+            self.send_team1_ready()
+
+        @self.sio.event
+        def disconnect():
+            print("❌ Отключено от сервера.")
+            
+        #ID поединка
+        @self.sio.on("BACK-END: Fight ID sent.")
+        def get_fight_id(data):
+            self.id = data.get("fight_id")
+            
+
+        # Обработчики для событий от сервера
+        @self.sio.on("BACK-END: Team 1 ready sent.")
+        def on_team1_ready(data):
+            print(f"Команда 1 готова: {data}")
+
+        @self.sio.on("BACK-END: Team 2 ready sent.")
+        def on_team2_ready(data):
+            print(f"Команда 2 готова: {data}")
+
+        @self.sio.on("BACK-END: Fight start sent.")
+        def on_fight_start(data):
+            print(f"Бой начался: {data}")
+
+        @self.sio.on("BACK-END: Fight end sent.")
+        def on_fight_end(data):
+            print(f"Бой завершен: {data}")
+
+    def connect(self):
+        """Подключается к серверу."""
+        self.sio.connect(self.api_url)
+        self.sio.wait()
+
+    def send_team1_ready(self):
+        """Отправляет готовность команды 1."""
+        self.sio.emit("BUTTONS: Team 1 ready.")
+
+    def send_team2_ready(self):
+        """Отправляет готовность команды 2."""
+        self.sio.emit("BUTTONS: Team 2 ready.")
+
+    def send_fight_start(self):
+        """Отправляет запрос на начало боя."""
+        self.sio.emit("BUTTONS: Fight start.")
+
+    def send_fight_end(self):
+        """Отправляет запрос на завершение боя."""
+        self.sio.emit("BUTTONS: Fight end.")
+
+    def disconnect(self):
+        """Отключается от сервера."""
+        self.sio.disconnect()
+
+
+# Пример использования
+if __name__ == "__main__":
+    tournament = Tournament(
+        id=123,
+        login="admin",
+        password="secret",
+        api_url="https://grmvzdlx-3008.euw.devtunnels.ms"  # Укажите ваш URL сервера
+    )

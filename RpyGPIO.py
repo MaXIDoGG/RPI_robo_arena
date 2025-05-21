@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import os
 from Tournament import Tournament
 
-load_dotenv() 
+load_dotenv()
 login=os.getenv("login")
 password=os.getenv("password")
 api_url=os.getenv("api_url")
@@ -21,6 +21,7 @@ class GPIOHandler(QObject):
     def __init__(self):
         # self.tournament = Tournament(id=fight_id, login=login, password=password, api_url=api_url)
         self.lock = threading.Lock()
+        self.threads = []
         # Настройки по умолчанию
         self.LED_COUNT = 180
         self.LED_PIN = 18
@@ -34,18 +35,14 @@ class GPIOHandler(QObject):
         self.STATE_WAITING = 0
         self.STATE_READY = 1
         self.STATE_FIGHT = 2
+        self.PREPARING = 3
+
 
         super().__init__()
         self.current_state = self.STATE_WAITING
         self.team1_ready = False
         self.team2_ready = False
-        self.team1_ready_event = threading.Event()
-        self.team2_ready_event = threading.Event()
-        self.team1_stop_event = threading.Event()
-        self.team2_stop_event = threading.Event()
-        self.referee_start_event = threading.Event()
-        self.referee_stop_event = threading.Event()
-        
+
 
         # Настройка пинов для кнопок
         self.TEAM1_READY = 5
@@ -74,8 +71,7 @@ class GPIOHandler(QObject):
         for button in self.buttons:
             GPIO.setup(button, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
-        self._running = False
-        self._task = None
+        self._running = True
 
     def run_loop(self):
         """Основной цикл обработки кнопок"""
@@ -83,8 +79,7 @@ class GPIOHandler(QObject):
         try:
         # Инициализация - синий цвет
             self.set_color(Color(0, 0, 255))
-
-            while True:
+            while self._running:
                 # Проверка всех кнопок
                 for button in self.buttons:
                     if GPIO.input(button) == GPIO.HIGH:
@@ -92,52 +87,49 @@ class GPIOHandler(QObject):
                         threading.Thread(target=self.handle_button_press, args=(button, )).start()
                         time.sleep(0.1)  # Задержка для антидребезга
                         print(self.current_state, self.team1_ready, self.team2_ready, button)
-                        
+
 
                 time.sleep(0.05)
 
         except KeyboardInterrupt:
-            self.set_color(Color(0, 0, 0))  # Выключить все светодиоды
-            GPIO.cleanup()
+            self.stop()
             print("Программа завершена.")
 
     def handle_button_press(self, button):
         """Обработка нажатия кнопки"""
         print(button)
-        if button == self.TEAM1_READY and self.current_state == self.STATE_WAITING and not self.team1_ready:
+        if button == self.TEAM1_READY and self.current_state == self.PREPARING and not self.team1_ready:
             self.team1_ready = True
             self.fade_to_color(Color(0, 255, 0), team=1)  # Зеленый
             if self.team2_ready:
                 self.current_state = self.STATE_READY
-            # result = self.tournament.set_ready("565", "first_ready", "https://grmvzdlx-3008.euw.devtunnels.ms")
-            # print(result)
-            # result = self.tournament.reload_page("https://grmvzdlx-3008.euw.devtunnels.ms")
-            # print(result)
-        elif button == self.TEAM2_READY and self.current_state == self.STATE_WAITING and not self.team2_ready:
+        elif button == self.TEAM2_READY and self.current_state == self.PREPARING and not self.team2_ready:
             self.team2_ready = True
             self.fade_to_color(Color(0, 255, 0), team=2)  # Зеленый
             if self.team1_ready:
                 self.current_state = self.STATE_READY
-            # result = self.tournament.set_ready("565", "second_ready", "https://grmvzdlx-3008.euw.devtunnels.ms")
-            # print(result)
-            # result = self.tournament.reload_page("https://grmvzdlx-3008.euw.devtunnels.ms")
-            # print(result)
         elif button == self.REFEREE_START and self.current_state != self.STATE_FIGHT:
-            self.current_state = self.STATE_FIGHT
-            self.fight_started.emit()
-            self.fade_to_color(Color(255, 0, 0), team=0, duration=2)  # Красный
-            # result = self.tournament.setfight("565", "2", "https://grmvzdlx-3008.euw.devtunnels.ms")
-            # print(result)
-            # result = self.tournament.reload_page("https://grmvzdlx-3008.euw.devtunnels.ms")
-            # print(result)
+            if self.current_state == self.STATE_WAITING:
+                self.current_state = self.PREPARING
+                self.fight_started.emit()
+            else:
+                self.current_state = self.STATE_FIGHT
+                self.fight_started.emit()
+                self.fade_to_color(Color(255, 0, 0), team=0, duration=2)  # Красный
         elif (button in [self.TEAM1_STOP, self.TEAM2_STOP, self.REFEREE_STOP]) and self.current_state != self.STATE_WAITING:
             self.fight_stopped.emit()
             self.reset_to_waiting()
-            # result = self.tournament.setfight("565", "3", "https://grmvzdlx-3008.euw.devtunnels.ms")
-            # print(result)
-            # result = self.tournament.reload_page("https://grmvzdlx-3008.euw.devtunnels.ms")
-            # print(result)
 
+
+    def space_handler(self):
+        if self.current_state == self.STATE_FIGHT:
+            self.current_state = self.STATE_WAITING
+            self.team1_ready = False
+            self.team2_ready = False
+            self.set_color(Color(0, 0, 255))  # Синий
+        elif self.current_state == self.PREPARING:
+            self.current_state = self.STATE_WAITING
+            self.set_color(Color(0, 0, 255)) # Синий
 
     def set_color(self, color, team=0):
         """Установка цвета всей ленты"""
@@ -151,14 +143,12 @@ class GPIOHandler(QObject):
             for i in range(self.strip.numPixels()):
                 self.strip.setPixelColor(i, color)
         self.strip.show()
-        # if duration > 0:
-        #     time.sleep(duration)
 
     def fade_to_color(self, target_color, team=0, duration=0.5):
         """Плавный переход к указанному цвету"""
         steps = 100
         delay = duration / steps
-        
+
         if team==2:
             current_color = self.strip.getPixelColor(0)
         else:
@@ -180,13 +170,13 @@ class GPIOHandler(QObject):
                 self.set_color(Color(r, g, b), team=team)
                 time.sleep(delay)
 
-    def blink(self, target_color, team=0, duration=2.0):
-        """Мигание цветом"""
-        
-        current_color = self.strip.getPixelColor(0)
-        
-        self.fade_to_color(target_color, team=team, duration=duration/2)
-        self.fade_to_color(current_color, team=team, duration=duration/2)
+    # def blink(self, target_color, team=0, duration=2.0):
+    #     """Мигание цветом"""
+
+    #     current_color = self.strip.getPixelColor(0)
+
+    #     self.fade_to_color(target_color, team=team, duration=duration/2)
+    #     self.fade_to_color(current_color, team=team, duration=duration/2)
 
     def reset_to_waiting(self):
         """Сброс в состояние ожидания"""
@@ -197,6 +187,8 @@ class GPIOHandler(QObject):
 
     def stop(self):
         print("Stoping")
+        for t in self.threads:
+            t.join()
         self.set_color(Color(0, 0, 0))
         self._running = False
         GPIO.cleanup()
@@ -207,5 +199,3 @@ def main():
 
 if __name__ == "__main__":
   main()
-
-
