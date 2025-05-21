@@ -30,9 +30,8 @@ class Tournament:
         #ID поединка
         @self.sio.on("BACK-END: Fight ID sent.")
         def get_fight_id(data):
-            self.id = data.get("fight_id")
+            self.id = data
             
-
         # Обработчики для событий от сервера
         @self.sio.on("BACK-END: Team 1 ready sent.")
         def on_team1_ready(data):
