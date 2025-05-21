@@ -84,7 +84,8 @@ class GPIOHandler(QObject):
         try:
         # Инициализация - синий цвет
             self.set_color(Color(0, 0, 0))
-            self.set_color(Color(0, 0, 255))
+            # self.set_color(Color(0, 0, 255))
+            self.circle_color(Color(0, 0, 255), Color(255, 0, 0))
             while self._running:
                 # Проверка всех кнопок
                 for button in self.buttons:
@@ -117,14 +118,13 @@ class GPIOHandler(QObject):
                 self.current_state = self.STATE_READY
             self.tournament.send_team2_ready()
         elif button == self.REFEREE_START and self.current_state != self.STATE_FIGHT:
+            self.fight_started.emit()
             if self.current_state == self.STATE_WAITING:
                 self.current_state = self.PREPARING
-                self.fight_started.emit() # ????
                 self.tournament.send_preparing()
             else:
                 self.current_state = self.STATE_FIGHT
-                self.fight_started.emit()
-                self.fade_to_color(Color(255, 0, 0), team=0, duration=2)  # Красный
+                self.fade_to_color(Color(255, 0, 0), team=0)  # Красный
                 self.tournament.send_fight_start()
         elif (button in [self.TEAM1_STOP, self.TEAM2_STOP, self.REFEREE_STOP]) and self.current_state != self.STATE_WAITING:
             self.fight_stopped.emit()
@@ -180,6 +180,26 @@ class GPIOHandler(QObject):
 
                 self.set_color(Color(r, g, b), team=team)
                 time.sleep(delay)
+                
+    def circle_color(self, first_color, second_color, duration=2):
+        line_id = 0
+        current_color = first_color
+        for k in range(100):
+            for i in range(self.LED_COUNT):
+                if i < line_id % self.LED_COUNT or i > (line_id + 10) % self.LED_COUNT:
+                    current_color = first_color
+                else:
+                    current_color = second_color
+                self.strip.setPixelColor(i, current_color)
+            
+            self.strip.show()
+            line_id += 1
+            time.sleep(0.1)
+        
+        
+        
+            
+            
 
     # def blink(self, target_color, team=0, duration=2.0):
     #     """Мигание цветом"""

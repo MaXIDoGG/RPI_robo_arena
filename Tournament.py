@@ -9,6 +9,7 @@ class Tournament:
         self.login = login
         self.password = password
         self.sio = socketio.Client()
+        self.is_connected = False
         
         # Регистрация обработчиков событий
         self.register_handlers()
@@ -22,43 +23,57 @@ class Tournament:
         @self.sio.event
         def connect():
             print("✅ Подключено к серверу.")
+            self.is_connected = True
 
         @self.sio.event
         def disconnect():
             print("❌ Отключено от сервера.")
+            self.is_connected = False
             
         #ID поединка
         @self.sio.on("BACK-END: Fight ID sent.")
         def get_fight_id(id):
             self.id = id
+            print(f"ID поединка: {id}")
             
     def connect(self):
         """Подключается к серверу."""
-        self.sio.connect(self.api_url, wait_timeout = 10)
+        try:
+            self.sio.connect(self.api_url, wait_timeout = 10)
+            self.is_connected = True
+        except Exception as e:
+            print(f"⚠️ Не удалось подключиться: {e}")
+            self.is_connected = False
 
     def send_team1_ready(self):
         """Отправляет готовность команды 1."""
-        self.sio.emit("BUTTONS: Team 1 ready.", self.id)
+        if self.is_connected:
+            self.sio.emit("BUTTONS: Team 1 ready.", self.id)
 
     def send_team2_ready(self):
         """Отправляет готовность команды 2."""
-        self.sio.emit("BUTTONS: Team 2 ready.", self.id)
+        if self.is_connected:
+            self.sio.emit("BUTTONS: Team 2 ready.", self.id)
 
     def send_fight_start(self):
         """Отправляет запрос на начало боя."""
-        self.sio.emit("BUTTONS: Fight start.", self.id)
+        if self.is_connected:
+            self.sio.emit("BUTTONS: Fight start.", self.id)
 
     def send_fight_end(self):
         """Отправляет запрос на завершение боя."""
-        self.sio.emit("BUTTONS: Fight end.", self.id)
+        if self.is_connected:
+            self.sio.emit("BUTTONS: Fight end.", self.id)
         
     def send_preparing(self):
         """Отправляет запрос на подготовку к бою."""
-        self.sio.emit("BUTTONS: Preparing start.", self.id)
+        if self.is_connected:
+            self.sio.emit("BUTTONS: Preparing start.", self.id)
 
     def disconnect(self):
         """Отключается от сервера."""
-        self.sio.disconnect()
+        if self.is_connected:
+            self.sio.disconnect()
 
 
 # Пример использования
