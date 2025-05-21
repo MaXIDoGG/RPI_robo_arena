@@ -22,7 +22,6 @@ class Tournament:
         @self.sio.event
         def connect():
             print("✅ Подключено к серверу.")
-            self.send_team1_ready()
 
         @self.sio.event
         def disconnect():
@@ -58,7 +57,7 @@ class Tournament:
 
     def send_team1_ready(self):
         """Отправляет готовность команды 1."""
-        self.sio.emit("BUTTONS: Team 1 ready.")
+        self.sio.emit("BUTTONS: Team 1 ready.", self.id)
 
     def send_team2_ready(self):
         """Отправляет готовность команды 2."""

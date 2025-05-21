@@ -19,7 +19,12 @@ class GPIOHandler(QObject):
     fight_stopped = pyqtSignal()
 
     def __init__(self):
-        # self.tournament = Tournament(id=fight_id, login=login, password=password, api_url=api_url)
+        self.tournament = Tournament(
+            id=123,
+            login="admin",
+            password="secret",
+            api_url="https://grmvzdlx-3008.euw.devtunnels.ms"  # Укажите ваш URL сервера
+        )
         self.lock = threading.Lock()
         self.threads = []
         # Настройки по умолчанию
@@ -101,6 +106,7 @@ class GPIOHandler(QObject):
         print(button)
         if button == self.TEAM1_READY and self.current_state == self.PREPARING and not self.team1_ready:
             self.team1_ready = True
+            self.tournament.send_team1_ready()
             self.fade_to_color(Color(0, 255, 0), team=1)  # Зеленый
             if self.team2_ready:
                 self.current_state = self.STATE_READY
