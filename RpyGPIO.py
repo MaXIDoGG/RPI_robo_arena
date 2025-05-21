@@ -104,9 +104,9 @@ class GPIOHandler(QObject):
     def handle_button_press(self, button):
         """Обработка нажатия кнопки"""
         print(button)
+        self.tournament.send_team1_ready()
         if button == self.TEAM1_READY and self.current_state == self.PREPARING and not self.team1_ready:
             self.team1_ready = True
-            self.tournament.send_team1_ready()
             self.fade_to_color(Color(0, 255, 0), team=1)  # Зеленый
             if self.team2_ready:
                 self.current_state = self.STATE_READY
