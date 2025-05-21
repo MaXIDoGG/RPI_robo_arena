@@ -59,15 +59,15 @@ class Tournament:
 
     def send_team2_ready(self):
         """Отправляет готовность команды 2."""
-        self.sio.emit("BUTTONS: Team 2 ready.")
+        self.sio.emit("BUTTONS: Team 2 ready.", self.id)
 
     def send_fight_start(self):
         """Отправляет запрос на начало боя."""
-        self.sio.emit("BUTTONS: Fight start.")
+        self.sio.emit("BUTTONS: Fight start.", self.id)
 
     def send_fight_end(self):
         """Отправляет запрос на завершение боя."""
-        self.sio.emit("BUTTONS: Fight end.")
+        self.sio.emit("BUTTONS: Fight end.", self.id)
 
     def disconnect(self):
         """Отключается от сервера."""

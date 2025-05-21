@@ -104,17 +104,18 @@ class GPIOHandler(QObject):
     def handle_button_press(self, button):
         """Обработка нажатия кнопки"""
         print(button)
-        self.tournament.send_team1_ready()
         if button == self.TEAM1_READY and self.current_state == self.PREPARING and not self.team1_ready:
             self.team1_ready = True
             self.fade_to_color(Color(0, 255, 0), team=1)  # Зеленый
             if self.team2_ready:
                 self.current_state = self.STATE_READY
+            self.tournament.send_team1_ready()
         elif button == self.TEAM2_READY and self.current_state == self.PREPARING and not self.team2_ready:
             self.team2_ready = True
             self.fade_to_color(Color(0, 255, 0), team=2)  # Зеленый
             if self.team1_ready:
                 self.current_state = self.STATE_READY
+            self.tournament.send_team2_ready()
         elif button == self.REFEREE_START and self.current_state != self.STATE_FIGHT:
             if self.current_state == self.STATE_WAITING:
                 self.current_state = self.PREPARING
@@ -123,9 +124,11 @@ class GPIOHandler(QObject):
                 self.current_state = self.STATE_FIGHT
                 self.fight_started.emit()
                 self.fade_to_color(Color(255, 0, 0), team=0, duration=2)  # Красный
+                self.tournament.send_fight_start()
         elif (button in [self.TEAM1_STOP, self.TEAM2_STOP, self.REFEREE_STOP]) and self.current_state != self.STATE_WAITING:
             self.fight_stopped.emit()
             self.reset_to_waiting()
+            self.tournament.send_fight_stop()
 
 
     def space_handler(self):
