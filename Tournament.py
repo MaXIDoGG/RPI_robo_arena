@@ -29,26 +29,9 @@ class Tournament:
             
         #ID поединка
         @self.sio.on("BACK-END: Fight ID sent.")
-        def get_fight_id(data):
-            self.id = data
+        def get_fight_id(id):
+            self.id = id
             
-        # Обработчики для событий от сервера
-        @self.sio.on("BACK-END: Team 1 ready sent.")
-        def on_team1_ready(data):
-            print(f"Команда 1 готова: {data}")
-
-        @self.sio.on("BACK-END: Team 2 ready sent.")
-        def on_team2_ready(data):
-            print(f"Команда 2 готова: {data}")
-
-        @self.sio.on("BACK-END: Fight start sent.")
-        def on_fight_start(data):
-            print(f"Бой начался: {data}")
-
-        @self.sio.on("BACK-END: Fight end sent.")
-        def on_fight_end(data):
-            print(f"Бой завершен: {data}")
-
     def connect(self):
         """Подключается к серверу."""
         self.sio.connect(self.api_url, wait_timeout = 10)
