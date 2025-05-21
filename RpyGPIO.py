@@ -185,7 +185,7 @@ class GPIOHandler(QObject):
         delay = 1 / frequency
         line_id = 0
         current_color = first_color
-        for k in range(duration/delay):
+        for k in range(int(duration/delay)):
             for i in range(self.LED_COUNT):
                 if i < line_id % self.LED_COUNT or i > (line_id % self.LED_COUNT + 10):
                     current_color = first_color
