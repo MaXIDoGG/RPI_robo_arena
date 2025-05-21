@@ -124,11 +124,11 @@ class GPIOHandler(QObject):
                 self.current_state = self.STATE_FIGHT
                 self.fight_started.emit()
                 self.fade_to_color(Color(255, 0, 0), team=0, duration=2)  # Красный
-                self.tournament.send_fight_stop()
+                self.tournament.send_fight_start()
         elif (button in [self.TEAM1_STOP, self.TEAM2_STOP, self.REFEREE_STOP]) and self.current_state != self.STATE_WAITING:
             self.fight_stopped.emit()
             self.reset_to_waiting()
-            self.tournament.send_fight_stop()
+            self.tournament.send_fight_end()
 
 
     def space_handler(self):
