@@ -83,6 +83,10 @@ class GPIOHandler(QObject):
                 # Проверка всех кнопок
                 for button in self.buttons:
                     if GPIO.input(button) == GPIO.HIGH:
+                        FIFO = "/tmp/sound_trigger"
+
+                        with open(FIFO, 'w') as f:
+                            f.write("play")
                         t = threading.Thread(target=self.handle_button_press, args=(button, )).start()
                         self.threads.append(t)
 
