@@ -79,7 +79,8 @@ class GPIOHandler(QObject):
         # Инициализация - синий цвет
             self.set_color(Color(0, 0, 0))
             # self.set_color(Color(0, 0, 255))
-            t = threading.Thread(target=self.circle_color, args=(Color(0, 0, 255), Color(255, 0, 0))).start()
+            t = threading.Thread(target=self.circle_color, args=(Color(0, 0, 255), Color(255, 0, 0)))
+            t.start()
             # self.circle_color(Color(0, 0, 255), Color(255, 0, 0))
             while self._running:
                 # Проверка всех кнопок
