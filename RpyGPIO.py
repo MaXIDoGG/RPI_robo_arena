@@ -186,23 +186,49 @@ class GPIOHandler(QObject):
             self.set_color(Color(r, g, b), team=team)
             time.sleep(delay)
 
-    def circle_color(self, first_color: Color, second_color: Color, frequency:int=100):
-        """Движение цветной линии по кругу"""
+    # def circle_color(self, first_color: Color, second_color: Color, frequency:int=100):
+    #     """Движение цветной линии по кругу"""
+    #     delay = 1 / frequency
+    #     line_id = 0
+    #     current_color = first_color
+    #     while self.current_state == self.STATE_WAITING and self._running:
+    #         for i in range(self.LED_COUNT):
+    #             pos = (i - line_id) % self.LED_COUNT
+    #             if pos <= self.LED_COUNT // 2:
+    #                 current_color = second_color
+    #             else:
+    #                 current_color = first_color
+    #             self.strip.setPixelColor(i, current_color)
+
+    #         self.strip.show()
+    #         line_id += 1
+    #         time.sleep(delay)
+    
+    def circle_color(self, first_color: Color, second_color: Color, frequency: int = 100):
+        """Две цветные линии бегают по двум половинам ленты по кругу."""
         delay = 1 / frequency
-        line_id = 0
-        current_color = first_color
+        half = self.LED_COUNT // 2
+        line_id1 = 0  # для первой половины
+        line_id2 = 0  # для второй половины
+
         while self.current_state == self.STATE_WAITING and self._running:
             for i in range(self.LED_COUNT):
-                pos = (i - line_id) % self.LED_COUNT
-                if pos <= self.LED_COUNT // 2:
-                    current_color = second_color
+                if i < half:
+                    # первая половина — бегает линия first_color
+                    pos = (i - line_id1) % half
+                    color = first_color if pos == 0 else second_color
                 else:
-                    current_color = first_color
-                self.strip.setPixelColor(i, current_color)
+                    # вторая половина — бегает линия second_color
+                    pos = ((i - half) - line_id2) % half
+                    color = second_color if pos == 0 else first_color
+
+                self.strip.setPixelColor(i, color)
 
             self.strip.show()
-            line_id += 1
+            line_id1 = (line_id1 + 1) % half
+            line_id2 = (line_id2 + 1) % half
             time.sleep(delay)
+
 
     def reset_to_waiting(self):
         """Сброс в состояние ожидания"""
@@ -220,8 +246,8 @@ class GPIOHandler(QObject):
         GPIO.cleanup()
 
 def main():
-	gpio_handler = GPIOHandler()
-	gpio_handler.run_loop()
+    gpio_handler = GPIOHandler()
+    gpio_handler.run_loop()
 
 if __name__ == "__main__":
   main()
