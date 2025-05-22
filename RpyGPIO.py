@@ -79,13 +79,16 @@ class GPIOHandler(QObject):
         # Инициализация - синий цвет
             self.set_color(Color(0, 0, 0))
             # self.set_color(Color(0, 0, 255))
-            threading.Thread(target=self.circle_color, args=(Color(0, 0, 255), Color(255, 0, 0))).start()
+            threading.Thread(target=self.circle_color, args=(Color(240,190,4), Color(64,59,49))).start()
             # self.circle_color(Color(0, 0, 255), Color(255, 0, 0))
             while self._running:
                 # Проверка всех кнопок
                 for button in self.buttons:
                     if GPIO.input(button) == GPIO.HIGH:
-                        threading.Thread(target=self.handle_button_press, args=(button, )).start()
+                        t = threading.Thread(target=self.handle_button_press, args=(button, ))
+                        t.start()
+                        self.threads.append(t)
+                        
                         time.sleep(0.1)
                         print(self.current_state, self.team1_ready, self.team2_ready, button)
 
@@ -184,7 +187,7 @@ class GPIOHandler(QObject):
         while self.current_state == self.STATE_WAITING:
             for i in range(self.LED_COUNT):
                 pos = (i - line_id) % self.LED_COUNT
-                if pos <= 15:
+                if pos <= self.LED_COUNT // 2:
                     current_color = second_color
                 else:
                     current_color = first_color
