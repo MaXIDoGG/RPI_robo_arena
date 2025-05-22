@@ -79,14 +79,12 @@ class GPIOHandler(QObject):
         # Инициализация - синий цвет
             self.set_color(Color(0, 0, 0))
             # self.set_color(Color(0, 0, 255))
-            t = threading.Thread(target=self.circle_color, args=(Color(0, 0, 255), Color(255, 0, 0)))
-            t.start()
+            threading.Thread(target=self.circle_color, args=(Color(0, 0, 255), Color(255, 0, 0))).start()
             # self.circle_color(Color(0, 0, 255), Color(255, 0, 0))
             while self._running:
                 # Проверка всех кнопок
                 for button in self.buttons:
                     if GPIO.input(button) == GPIO.HIGH:
-                        t.join()
                         threading.Thread(target=self.handle_button_press, args=(button, )).start()
                         time.sleep(0.1)
                         print(self.current_state, self.team1_ready, self.team2_ready, button)
@@ -178,12 +176,12 @@ class GPIOHandler(QObject):
             self.set_color(Color(r, g, b), team=team)
             time.sleep(delay)
                 
-    def circle_color(self, first_color: Color, second_color: Color, frequency:int=100, duration:int=100):
+    def circle_color(self, first_color: Color, second_color: Color, frequency:int=100):
         """Движение цветной линии по кругу"""
         delay = 1 / frequency
         line_id = 0
         current_color = first_color
-        for k in range(int(duration/delay)):
+        while self.current_state == self.STATE_WAITING:
             for i in range(self.LED_COUNT):
                 pos = (i - line_id) % self.LED_COUNT
                 if pos <= 15:
