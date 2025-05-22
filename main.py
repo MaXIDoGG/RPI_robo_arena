@@ -41,7 +41,7 @@ class GPIOHandler(QObject):
         # Настройка SPI
         self.spi = spidev.SpiDev()
         self.spi.open(0, 0)  # Bus 0, Device 0
-        self.spi.max_speed_hz = 8000000  # 8 MHz
+        self.spi.max_speed_hz = 800000  # 8 MHz
 
         # Кнопки
         self.TEAM1_READY = 5
