@@ -1,13 +1,12 @@
 import requests
 import json
 import socketio
+import os
+from dotenv import load_dotenv
 
 class Tournament:
-    def __init__(self, id, login, password, api_url):
+    def __init__(self, api_url):
         self.api_url = api_url
-        self.id = id
-        self.login = login
-        self.password = password
         self.sio = socketio.Client()
         self.is_connected = False
         
@@ -78,9 +77,8 @@ class Tournament:
 
 # Пример использования
 if __name__ == "__main__":
+    load_dotenv()
+    api_url=os.getenv("API_URL")
     tournament = Tournament(
-        id=123,
-        login="admin",
-        password="secret",
-        api_url="https://grmvzdlx-3008.euw.devtunnels.ms"  # Укажите ваш URL сервера
+        api_url=api_url
     )

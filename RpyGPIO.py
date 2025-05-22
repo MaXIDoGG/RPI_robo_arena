@@ -8,10 +8,7 @@ import os
 from Tournament import Tournament
 
 load_dotenv()
-login=os.getenv("login")
-password=os.getenv("password")
-api_url=os.getenv("api_url")
-fight_id = os.getenv("fight_id")
+api_url=os.getenv("API_URL")
 
 class GPIOHandler(QObject):
     # Сигналы для внешних событий
@@ -20,13 +17,11 @@ class GPIOHandler(QObject):
 
     def __init__(self):
         self.tournament = Tournament(
-            id=123,
-            login="admin",
-            password="secret",
-            api_url="https://grmvzdlx-3008.euw.devtunnels.ms"  # Укажите ваш URL сервера
+            api_url=api_url
         )
         self.lock = threading.Lock()
         self.threads = []
+        
         # Настройки по умолчанию
         self.LED_COUNT = 180
         self.LED_PIN = 18
@@ -41,7 +36,6 @@ class GPIOHandler(QObject):
         self.STATE_READY = 1
         self.STATE_FIGHT = 2
         self.PREPARING = 3
-
 
         super().__init__()
         self.current_state = self.STATE_WAITING
@@ -85,14 +79,15 @@ class GPIOHandler(QObject):
         # Инициализация - синий цвет
             self.set_color(Color(0, 0, 0))
             # self.set_color(Color(0, 0, 255))
-            self.circle_color(Color(0, 0, 255), Color(255, 0, 0))
+            t = threading.Thread(target=self.circle_color, args=(Color(0, 0, 255), Color(255, 0, 0))).start()
+            # self.circle_color(Color(0, 0, 255), Color(255, 0, 0))
             while self._running:
                 # Проверка всех кнопок
                 for button in self.buttons:
                     if GPIO.input(button) == GPIO.HIGH:
-                        # self.handle_button_press(button)
+                        t.join()
                         threading.Thread(target=self.handle_button_press, args=(button, )).start()
-                        time.sleep(0.1)  # Задержка для антидребезга
+                        time.sleep(0.1)
                         print(self.current_state, self.team1_ready, self.team2_ready, button)
 
 
@@ -144,16 +139,17 @@ class GPIOHandler(QObject):
 
     def set_color(self, color, team=0):
         """Установка цвета всей ленты"""
-        if team == 1:
-                for i in range(90, self.strip.numPixels()):
+        with self.lock:
+            if team == 1:
+                    for i in range(90, self.strip.numPixels()):
+                        self.strip.setPixelColor(i, color)
+            elif team == 2:
+                for i in range(self.strip.numPixels()-90):
                     self.strip.setPixelColor(i, color)
-        elif team == 2:
-            for i in range(self.strip.numPixels()-90):
-                self.strip.setPixelColor(i, color)
-        else:
-            for i in range(self.strip.numPixels()):
-                self.strip.setPixelColor(i, color)
-        self.strip.show()
+            else:
+                for i in range(self.strip.numPixels()):
+                    self.strip.setPixelColor(i, color)
+            self.strip.show()
 
     def fade_to_color(self, target_color, team=0, duration=0.5):
         """Плавный переход к указанному цвету"""
@@ -172,14 +168,14 @@ class GPIOHandler(QObject):
         target_g = (target_color >> 8) & 0xff
         target_b = target_color & 0xff
 
-        with self.lock:
-            for step in range(steps):
-                r = int(current_r + (target_r - current_r) * (step / steps))
-                g = int(current_g + (target_g - current_g) * (step / steps))
-                b = int(current_b + (target_b - current_b) * (step / steps))
+        # with self.lock:
+        for step in range(steps):
+            r = int(current_r + (target_r - current_r) * (step / steps))
+            g = int(current_g + (target_g - current_g) * (step / steps))
+            b = int(current_b + (target_b - current_b) * (step / steps))
 
-                self.set_color(Color(r, g, b), team=team)
-                time.sleep(delay)
+            self.set_color(Color(r, g, b), team=team)
+            time.sleep(delay)
                 
     def circle_color(self, first_color: Color, second_color: Color, frequency:int=100, duration:int=100):
         """Движение цветной линии по кругу"""
