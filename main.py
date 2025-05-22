@@ -1,31 +1,37 @@
 import os
-import pygame
-from pathlib import Path
+import subprocess
 import time
 
-# Настройки
-FIFO_PATH = "/tmp/sound_pipe"
+FIFO = "/tmp/sound_pipe"
 SOUND_FILE = "Timer_sound.wav"
 
-# Создаем FIFO (если не существует)
-if not Path(FIFO_PATH).exists():
-    os.mkfifo(FIFO_PATH, mode=0o666)  # Права на чтение/запись для всех
+def check_audio_file():
+    """Проверяет, поддерживается ли файл"""
+    try:
+        # Проверка через ffprobe (из ffmpeg)
+        cmd = f"ffprobe -v error -show_entries stream=codec_name {SOUND_FILE}"
+        subprocess.run(cmd, shell=True, check=True)
+        return True
+    except:
+        return False
 
-# Инициализация звука
-pygame.mixer.init()
-print(f"Сервер звука запущен. Ожидание команд в {FIFO_PATH}...")
+def play_sound():
+    """Воспроизведение через aplay (надежнее pygame)"""
+    subprocess.run(["aplay", SOUND_FILE])
 
+if not check_audio_file():
+    print("Ошибка: неподдерживаемый формат аудио!")
+    exit(1)
+
+if not os.path.exists(FIFO):
+    os.mkfifo(FIFO, mode=0o666)
+
+print("Сервер запущен. Ожидание сигналов...")
 while True:
     try:
-        with open(FIFO_PATH, 'r') as pipe:
-            while True:
-                message = pipe.read().strip()
-                if message == "play":
-                    print("Воспроизведение звука")
-                    sound = pygame.mixer.Sound(SOUND_FILE)
-                    sound.play()
-                    while pygame.mixer.get_busy():  # Ждем окончания
-                        pygame.time.wait(100)
+        with open(FIFO, 'r') as f:
+            if f.read().strip() == "play":
+                play_sound()
     except Exception as e:
         print(f"Ошибка: {e}")
-        time.sleep(1)  # Пауза при ошибках
+        time.sleep(1)
