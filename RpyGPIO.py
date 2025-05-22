@@ -181,16 +181,18 @@ class GPIOHandler(QObject):
                 self.set_color(Color(r, g, b), team=team)
                 time.sleep(delay)
                 
-    def circle_color(self, first_color, second_color, frequency=30, duration=100):
+    def circle_color(self, first_color: Color, second_color: Color, frequency:int=30, duration:int=100):
+        """Движение цветной линии по кругу"""
         delay = 1 / frequency
         line_id = 0
         current_color = first_color
         for k in range(int(duration/delay)):
             for i in range(self.LED_COUNT):
-                if i < line_id % self.LED_COUNT or i > (line_id % self.LED_COUNT + 10):
-                    current_color = first_color
-                else:
+                pos = (i - line_id) % self.LED_COUNT
+                if pos <= 15:
                     current_color = second_color
+                else:
+                    current_color = first_color
                 self.strip.setPixelColor(i, current_color)
             
             self.strip.show()
