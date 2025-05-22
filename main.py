@@ -189,3 +189,10 @@ class GPIOHandler(QObject):
         self.spi.close()
         self._running = False
         GPIO.cleanup()
+        
+def main():
+	gpio_handler = GPIOHandler()
+	gpio_handler.run_loop()
+
+if __name__ == "__main__":
+  main()
