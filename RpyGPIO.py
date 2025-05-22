@@ -21,7 +21,7 @@ class GPIOHandler(QObject):
         )
         self.lock = threading.Lock()
         self.threads = []
-        
+
         # Настройки по умолчанию
         self.LED_COUNT = 180
         self.LED_PIN = 18
@@ -83,10 +83,9 @@ class GPIOHandler(QObject):
                 # Проверка всех кнопок
                 for button in self.buttons:
                     if GPIO.input(button) == GPIO.HIGH:
-                        t = threading.Thread(target=self.handle_button_press, args=(button, ))
-                        t.start()
+                        t = threading.Thread(target=self.handle_button_press, args=(button, )).start()
                         self.threads.append(t)
-                        
+
                         time.sleep(0.1)
                         print(self.current_state, self.team1_ready, self.team2_ready, button)
 
@@ -126,6 +125,9 @@ class GPIOHandler(QObject):
             self.reset_to_waiting()
             self.tournament.send_fight_end()
 
+    def end_prepare(self):
+        self.current_state = self.STATE_FIGHT
+        self.set_color(Color(255, 0, 0))
 
     def space_handler(self):
         if self.current_state == self.STATE_FIGHT:
@@ -139,7 +141,6 @@ class GPIOHandler(QObject):
         elif self.current_state == self.STATE_WAITING:
             self.current_state = self.PREPARING
             self.set_color(Color(0, 0, 255))
-            
 
     def set_color(self, color, team=0):
         """Установка цвета всей ленты"""
@@ -180,7 +181,7 @@ class GPIOHandler(QObject):
 
             self.set_color(Color(r, g, b), team=team)
             time.sleep(delay)
-                
+
     def circle_color(self, first_color: Color, second_color: Color, frequency:int=100):
         """Движение цветной линии по кругу"""
         delay = 1 / frequency
@@ -194,23 +195,10 @@ class GPIOHandler(QObject):
                 else:
                     current_color = first_color
                 self.strip.setPixelColor(i, current_color)
-            
+
             self.strip.show()
             line_id += 1
             time.sleep(delay)
-        
-        
-        
-            
-            
-
-    # def blink(self, target_color, team=0, duration=2.0):
-    #     """Мигание цветом"""
-
-    #     current_color = self.strip.getPixelColor(0)
-
-    #     self.fade_to_color(target_color, team=team, duration=duration/2)
-    #     self.fade_to_color(current_color, team=team, duration=duration/2)
 
     def reset_to_waiting(self):
         """Сброс в состояние ожидания"""
@@ -226,10 +214,3 @@ class GPIOHandler(QObject):
         self.set_color(Color(0, 0, 0))
         self._running = False
         GPIO.cleanup()
-
-def main():
-	gpio_handler = GPIOHandler()
-	gpio_handler.run_loop()
-
-if __name__ == "__main__":
-  main()
