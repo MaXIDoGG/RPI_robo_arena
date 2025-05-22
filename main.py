@@ -138,6 +138,7 @@ class GPIOHandler(QObject):
             threading.Thread(target=self.circle_color, args=(0x0000FF, 0xFF0000)).start()
             while self._running:
                 for button in self.buttons:
+                    print(button)
                     if GPIO.input(button) == GPIO.HIGH:
                         t = threading.Thread(target=self.handle_button_press, args=(button,))
                         t.start()
