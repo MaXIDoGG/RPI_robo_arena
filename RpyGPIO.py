@@ -184,7 +184,7 @@ class GPIOHandler(QObject):
         delay = 1 / frequency
         line_id = 0
         current_color = first_color
-        while self.current_state == self.STATE_WAITING:
+        while self.current_state == self.STATE_WAITING and self._running:
             for i in range(self.LED_COUNT):
                 pos = (i - line_id) % self.LED_COUNT
                 if pos <= self.LED_COUNT // 2:
@@ -220,7 +220,7 @@ class GPIOHandler(QObject):
     def stop(self):
         print("Stoping")
         for t in self.threads:
-            t.join()
+            t.join(timeout=0.1)
         self.set_color(Color(0, 0, 0))
         self._running = False
         GPIO.cleanup()
