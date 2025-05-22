@@ -83,10 +83,15 @@ class GPIOHandler(QObject):
                 # Проверка всех кнопок
                 for button in self.buttons:
                     if GPIO.input(button) == GPIO.HIGH:
-                        FIFO = "/tmp/sound_trigger"
+                        FIFO_PATH = "/tmp/sound_pipe"
 
-                        with open(FIFO, 'w') as f:
-                            f.write("play")
+                        try:
+                            with open(FIFO_PATH, 'w') as pipe:
+                                pipe.write("play")
+                            print("Сигнал на воспроизведение отправлен")
+                        except Exception as e:
+                            print(f"Ошибка отправки: {e}")
+
                         t = threading.Thread(target=self.handle_button_press, args=(button, )).start()
                         self.threads.append(t)
 
@@ -205,22 +210,23 @@ class GPIOHandler(QObject):
     #         time.sleep(delay)
     
     def circle_color(self, first_color: Color, second_color: Color, frequency: int = 100):
-        """Две цветные линии бегают по двум половинам ленты по кругу."""
+        """По каждой половине ленты движется полоса шириной 15 пикселей."""
         delay = 1 / frequency
         half = self.LED_COUNT // 2
+        band_width = 15  # ширина полосы
         line_id1 = 0  # для первой половины
         line_id2 = 0  # для второй половины
 
         while self.current_state == self.STATE_WAITING and self._running:
             for i in range(self.LED_COUNT):
                 if i < half:
-                    # первая половина — бегает линия first_color
+                    # Первая половина
                     pos = (i - line_id1) % half
-                    color = first_color if pos == 0 else second_color
+                    color = first_color if pos < band_width else Color(0, 0, 0)
                 else:
-                    # вторая половина — бегает линия second_color
+                    # Вторая половина
                     pos = ((i - half) - line_id2) % half
-                    color = second_color if pos == 0 else first_color
+                    color = second_color if pos < band_width else Color(0, 0, 0)
 
                 self.strip.setPixelColor(i, color)
 
@@ -228,6 +234,7 @@ class GPIOHandler(QObject):
             line_id1 = (line_id1 + 1) % half
             line_id2 = (line_id2 + 1) % half
             time.sleep(delay)
+
 
 
     def reset_to_waiting(self):
