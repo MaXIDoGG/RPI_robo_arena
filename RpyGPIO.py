@@ -83,14 +83,7 @@ class GPIOHandler(QObject):
                 # Проверка всех кнопок
                 for button in self.buttons:
                     if GPIO.input(button) == GPIO.HIGH:
-                        FIFO_PATH = "/tmp/sound_pipe"
-
-                        try:
-                            with open(FIFO_PATH, 'w') as pipe:
-                                pipe.write("play")
-                            print("Сигнал на воспроизведение отправлен")
-                        except Exception as e:
-                            print(f"Ошибка отправки: {e}")
+                        
 
                         t = threading.Thread(target=self.handle_button_press, args=(button, )).start()
                         self.threads.append(t)
