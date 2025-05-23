@@ -73,36 +73,43 @@ class GPIOHandler(QObject):
         self._running = True
 
     def run_loop(self):
-        """Основной цикл обработки кнопок с защитой от дребезга и повторного нажатия"""
+        """Обработка кнопок: реагирует только на нажатие с последующим отпусканием"""
         print("Starting!")
 
-        last_pressed = {button: 0 for button in self.buttons}  # время последнего нажатия
-        debounce_delay = 0.6  # минимальное время между нажатиями
+        # Хранит предыдущее состояние каждой кнопки
+        previous_states = {button: GPIO.LOW for button in self.buttons}
+        pressed_flags = {button: False for button in self.buttons}
 
         try:
-            # Инициализация - синий цвет
             self.set_color(Color(0, 0, 0))
             threading.Thread(target=self.circle_color, args=(Color(0, 0, 255), Color(255, 0, 0))).start()
 
             while self._running:
-                current_time = time.time()
-
                 for button in self.buttons:
-                    if GPIO.input(button) == GPIO.HIGH:
-                        if current_time - last_pressed[button] >= debounce_delay:
-                            last_pressed[button] = current_time  # обновляем время нажатия
+                    state = GPIO.input(button)
+
+                    # Если нажали кнопку (переход LOW → HIGH)
+                    if state == GPIO.HIGH and previous_states[button] == GPIO.LOW:
+                        pressed_flags[button] = True  # запоминаем, что кнопку нажали
+
+                    # Если отпустили кнопку (переход HIGH → LOW)
+                    elif state == GPIO.LOW and previous_states[button] == GPIO.HIGH:
+                        if pressed_flags[button]:  # была нажата ранее
+                            pressed_flags[button] = False  # сбрасываем флаг
                             t = threading.Thread(target=self.handle_button_press, args=(button,))
                             t.start()
                             self.threads.append(t)
                             print(self.current_state, self.team1_ready, self.team2_ready, button)
 
-                        time.sleep(0.1)  # пауза после обработки нажатия
+                    # Обновляем состояние кнопки
+                    previous_states[button] = state
 
-                time.sleep(0.05)  # небольшая задержка между циклами
+                time.sleep(0.01)
 
         except KeyboardInterrupt:
             self.stop()
             print("Программа завершена.")
+
 
 
     def handle_button_press(self, button):
