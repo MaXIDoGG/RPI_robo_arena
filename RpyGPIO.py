@@ -72,31 +72,40 @@ class GPIOHandler(QObject):
 
         self._running = True
 
-    def run_loop(self):
-        """Основной цикл обработки кнопок"""
-        print("Starting!")
-        try:
+    import time
+
+def run_loop(self):
+    """Основной цикл обработки кнопок с защитой от дребезга и повторного нажатия"""
+    print("Starting!")
+
+    last_pressed = {button: 0 for button in self.buttons}  # время последнего нажатия
+    debounce_delay = 0.6  # минимальное время между нажатиями
+
+    try:
         # Инициализация - синий цвет
-            self.set_color(Color(0, 0, 0))
-            threading.Thread(target=self.circle_color, args=(Color(0, 0, 255), Color(255, 0, 0))).start()
-            while self._running:
-                # Проверка всех кнопок
-                for button in self.buttons:
-                    if GPIO.input(button) == GPIO.HIGH:
-                        
+        self.set_color(Color(0, 0, 0))
+        threading.Thread(target=self.circle_color, args=(Color(0, 0, 255), Color(255, 0, 0))).start()
 
-                        t = threading.Thread(target=self.handle_button_press, args=(button, )).start()
+        while self._running:
+            current_time = time.time()
+
+            for button in self.buttons:
+                if GPIO.input(button) == GPIO.HIGH:
+                    if current_time - last_pressed[button] >= debounce_delay:
+                        last_pressed[button] = current_time  # обновляем время нажатия
+                        t = threading.Thread(target=self.handle_button_press, args=(button,))
+                        t.start()
                         self.threads.append(t)
-
-                        time.sleep(0.1)
                         print(self.current_state, self.team1_ready, self.team2_ready, button)
 
+                    time.sleep(0.1)  # пауза после обработки нажатия
 
-                time.sleep(0.05)
+            time.sleep(0.05)  # небольшая задержка между циклами
 
-        except KeyboardInterrupt:
-            self.stop()
-            print("Программа завершена.")
+    except KeyboardInterrupt:
+        self.stop()
+        print("Программа завершена.")
+
 
     def handle_button_press(self, button):
         """Обработка нажатия кнопки"""
